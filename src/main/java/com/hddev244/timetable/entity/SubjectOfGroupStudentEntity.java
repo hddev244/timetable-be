@@ -15,10 +15,12 @@ import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
 @Builder
 @AllArgsConstructor
+@NoArgsConstructor
 @Entity
 @Table(name = "SubjectOfGroupStudent")
 public class SubjectOfGroupStudentEntity {
@@ -38,9 +40,9 @@ public class SubjectOfGroupStudentEntity {
     @JoinColumn(name = "group_student_id")
     private GroupStudentEntity groupStudent;
 
-      @JsonIgnore
+    @JsonIgnore
     @OneToMany(mappedBy = "subjectOfGroupStudent")
-    private List<SlotEntity> slots ; 
+    private List<SlotEntity> slots; 
     
     @ManyToOne
     @JoinColumn(name = "block_id")

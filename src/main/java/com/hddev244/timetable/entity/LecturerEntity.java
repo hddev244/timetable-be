@@ -20,6 +20,9 @@ import lombok.NoArgsConstructor;
 @Entity
 @Table(name = "lecturers")
 public class LecturerEntity {
+    public LecturerEntity(String id) {
+        this.id = id;
+    }
     @Id
     private String id;
     private String name;

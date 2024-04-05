@@ -6,5 +6,5 @@ import java.util.Optional;
 import com.hddev244.timetable.entity.SlotEntity;
 
 public interface TimetableService {
-    List<Optional<SlotEntity>> generateTimetable();
+    SlotEntity[][][] generateTimetable();
 }

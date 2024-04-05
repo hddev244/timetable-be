@@ -13,10 +13,12 @@ import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
 @Builder
 @AllArgsConstructor
+@NoArgsConstructor
 @Entity
 @Table(name = "GroupStudentEntity")
 public class GroupStudentEntity {
@@ -31,4 +33,8 @@ public class GroupStudentEntity {
     @ManyToOne
     @JoinColumn(name = "major_id")
     private MajorEntity major;
+    
+    @ManyToOne
+    @JoinColumn(name = "school_year_id")
+    private SchoolYearEntity schoolYear;
 }

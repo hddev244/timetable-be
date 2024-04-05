@@ -8,6 +8,9 @@ import com.hddev244.timetable.service.LecturerService;
 
 import lombok.RequiredArgsConstructor;
 
+import java.util.List;
+
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -25,16 +28,17 @@ import org.springframework.web.bind.annotation.PostMapping;
 public class LecturerController {
     private final LecturerService lecturerService;
     @GetMapping
-    public String getAll() {
-        return "hello world";
+    public List<Lecturer> getAll() {
+        return lecturerService.findAll();
     }
     @GetMapping("/{id}")
     public Lecturer getOne(@PathVariable("id") String id) {
         return lecturerService.findById(id);
     }
     @PostMapping
-    public Lecturer postMethodName(@RequestBody Lecturer lecturer) {
-        return lecturerService.create(lecturer) ;
+    public ResponseEntity<Lecturer> postMethodName(@RequestBody Lecturer lecturer) {
+        Lecturer createdLecturer = lecturerService.create(lecturer) ;
+        return new ResponseEntity<>(createdLecturer, HttpStatus.CREATED);
     }
     
     @PutMapping("/{id}")

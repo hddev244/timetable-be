@@ -1,6 +1,5 @@
 package com.hddev244.timetable.model;
 
-import java.util.List;
 import lombok.Builder;
 import lombok.Data;
 
@@ -11,5 +10,8 @@ public class SubjectOfGroupStudent {
     private String subject_id;
     private String lecturer_id;
     private String groupStudent_id;
+    private Long block_id;
+    private Long semester_id;    
+
     // private List<SlotEntity> slots ; 
 }

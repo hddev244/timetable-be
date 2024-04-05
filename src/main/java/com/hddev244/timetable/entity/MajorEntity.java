@@ -11,13 +11,18 @@ import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
 @Builder
 @AllArgsConstructor
+@NoArgsConstructor
 @Entity
 @Table(name = "Majors")
 public class MajorEntity {
+    public MajorEntity(String id) {
+        this.id = id;
+    }
     @Id
     private String id;
     private String name;

@@ -14,6 +14,6 @@ public class Lecturer {
     @Id
     private String id;
     private String name;
-    private List<Subject> subjectOfLecturer;
+    private List<Subject> subjects;
     private List<SubjectOfGroupStudent> subjectOfGroupStudent;
 }
