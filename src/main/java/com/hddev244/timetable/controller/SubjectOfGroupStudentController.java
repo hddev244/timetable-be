@@ -37,9 +37,21 @@ public class SubjectOfGroupStudentController {
     public SubjectOfGroupStudentEntity getById(@PathVariable Long id) {
         return subjectOfGroupStudentService.getById(id);
     }
+
     @GetMapping("/list")
     public List<SubjectEntity> getBySubjectOfGroupStudent(@RequestParam("block_id") Long blockId, @RequestParam("semester_id") Long semesterId, @RequestParam("groupStudent_id") String groupStudentId) { 
         return subjectOfGroupStudentService.getByBlockSemesterClass(blockId, semesterId, groupStudentId);
+    }    
+    
+    @GetMapping("/list/by-subject")
+    public List<GroupStudentEntity> getBySubjectOfGroupStudentBySubject(
+        @RequestParam("block_id") Long blockId,
+        @RequestParam("semester_id") Long semesterId, 
+        @RequestParam("subject_id") String subject_id, 
+        @RequestParam("schoolYear_id") Integer schoolYear_id,
+        @RequestParam("major_id") String major_id
+        ) { 
+        return subjectOfGroupStudentService.getBySubjectOfGroupStudentBySubject(blockId, semesterId, subject_id,major_id,schoolYear_id);
     }
 
     @GetMapping
@@ -53,12 +65,6 @@ public class SubjectOfGroupStudentController {
     }
     @PutMapping("/change")
     public SubjectOfGroupStudentEntity change(@RequestBody SubjectOfGroupStudent requestBody) {
-        System.out.println("Change");
-        System.out.println(requestBody.getBlock_id());
-        System.out.println(requestBody.getGroupStudent_id());
-        System.out.println(requestBody.getSemester_id());
-        System.out.println(requestBody.getSubject_id());
-
         return subjectOfGroupStudentService.change(requestBody);
     }
 

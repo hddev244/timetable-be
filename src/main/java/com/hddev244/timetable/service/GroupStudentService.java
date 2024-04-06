@@ -11,4 +11,5 @@ public interface GroupStudentService {
     List<GroupStudentEntity> getAll();
     GroupStudentEntity update(GroupStudentEntity groupStudent);
     void delete(String id);
+    List<GroupStudentEntity> getByMajorAndStudentYear(String majorId, Integer schoolYearId);
 }

@@ -39,4 +39,9 @@ public class GroupStudentServiceImpl implements GroupStudentService {
     public void delete(String id) {
         groupStudentRepository.deleteById(id);
     }
+
+    @Override
+    public List<GroupStudentEntity> getByMajorAndStudentYear(String majorId, Integer schoolYearId) {
+        return groupStudentRepository.findByMajorIdAndStudentYearId(majorId, schoolYearId);
+    }
 }

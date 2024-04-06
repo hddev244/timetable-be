@@ -72,7 +72,6 @@ public class SubjectOfGroupStudentServiceImpl implements SubjectOfGroupStudentSe
         SubjectOfGroupStudentEntity subjectOfGroupStudentEntity = subjectOfGroupStudentRepository.findForChange(
                 requestBody.getBlock_id(), requestBody.getSemester_id(), requestBody.getGroupStudent_id(),
                 requestBody.getSubject_id());
-        System.out.println(subjectOfGroupStudentEntity == null);
         if (subjectOfGroupStudentEntity != null) {
             subjectOfGroupStudentRepository.delete(subjectOfGroupStudentEntity);
             return null;
@@ -98,5 +97,18 @@ public class SubjectOfGroupStudentServiceImpl implements SubjectOfGroupStudentSe
             subjectOfGroupStudentRepository.save(newEntity);
             return newEntity;
         }
+    }
+
+    @Override
+    public List<GroupStudentEntity> getBySubjectOfGroupStudentBySubject(Long blockId, Long semesterId, String subject_id,
+            String major_id, Integer schoolYear_id) {
+        // TODO Auto-generated method stub
+        List<SubjectOfGroupStudentEntity> subjectOfGroupStudentEntity = subjectOfGroupStudentRepository.findByBlockIdAndSemesterIdAndSubjectId(blockId, semesterId, subject_id, major_id, schoolYear_id); 
+        if (subjectOfGroupStudentEntity != null) {
+            return subjectOfGroupStudentEntity.stream()
+                    .map(SubjectOfGroupStudentEntity::getGroupStudent)
+                    .collect(Collectors.toList());
+        } 
+        return null;
     }
 }

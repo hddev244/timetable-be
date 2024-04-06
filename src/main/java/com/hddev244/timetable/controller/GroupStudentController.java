@@ -18,6 +18,11 @@ public class GroupStudentController {
         return groupStudentService.create(groupStudent);
     }
 
+    @GetMapping("/{majorId}/{studentYearId}")
+    public List<GroupStudentEntity> getByMajorAndStudentYear(@PathVariable("studentYearId") Integer studentYearId, @PathVariable("majorId") String majorId){
+        return groupStudentService.getByMajorAndStudentYear(majorId, studentYearId);
+    }
+
     @GetMapping("/{id}")
     public GroupStudentEntity getById(@PathVariable String id) {
         return groupStudentService.getById(id);
