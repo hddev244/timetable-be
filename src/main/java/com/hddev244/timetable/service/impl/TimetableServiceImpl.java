@@ -71,6 +71,7 @@ public class TimetableServiceImpl implements TimetableService {
         days = dayRepository.findAll();
         periods = periodRepository.findAll();
         timetable = new SlotEntity[days.size()][periods.size()][rooms.size()];
+     
 
         // 1. Khởi tạo số ca đã dạy của giảng viên
         lecturers.stream()
@@ -93,17 +94,12 @@ public class TimetableServiceImpl implements TimetableService {
                 .mapToInt(s -> s.getSubject().getNumOfPeriods())
                 .sum();
 
-        System.out.println("Total periods: " + totalPeriods);
+        System.out.println("Tổng số slot phải xếp: " + totalPeriods);
 
         // xóa môn có thể day của giảng viên nếu môn học không nằm trong
         // subjectOfGroupStudents
         lecturers = removeSubjectCanTeach(subjectOfGroupStudents, lecturers);
 
-        lecturers.forEach(lecturer -> {
-            System.out.println("Lecturer: " + lecturer.getId() + " - " + lecturer.getName() + " - "
-                    + lecturer.getSubjectOfLecturerEntities().size());
-            System.out.println("~~~~~~~~~~~~~~~~~~~~~~");
-        });
 
         // 3. Thêm giảng viên vào danh sách lớp
         subjectOfGroupStudents.forEach(s -> {
@@ -123,9 +119,11 @@ public class TimetableServiceImpl implements TimetableService {
         // duyệt qua tất cả các môn đã xếp cho lớp (SubjectOfGroupStudentEntity)
 
         int leng = subjectOfGroupStudents.size();
-        int numofday = days.size();
+        int numOfday = days.size();
         int numOfPeriods = periods.size();
         int numOfRoom = rooms.size();
+        int maxSlotOfPeriod = numOfRoom*7/10;
+        System.out.println("Số slot lớn nhất Của ca 3 (70% phòng): " + maxSlotOfPeriod);
         while (totalPeriodsAdded < totalPeriods) {
             totalPeriodsAdded = 0;
             for (int p = 3; p > 0; p--) {
@@ -135,8 +133,45 @@ public class TimetableServiceImpl implements TimetableService {
                     if (subjectOfClass.getSubject().getNumOfPeriods() != p) {
                         continue;
                     }
-                    for (int i = 0; i < numofday && !flag; i++) {
-                        for (int j = 0; j < numOfPeriods && !flag; j++) {
+
+                    for (int i = 0; i < numOfday && !flag; i++) {
+
+                        // kiểm tra nếu lớp đã trùng trong ngày thì chyển sang ngày tiếp theo
+                        if (p == 3) {
+                            boolean check = false;
+                            String groupStudentId = subjectOfClass.getGroupStudent().getId();
+                            for (int j = 0; j < numOfPeriods; j++) {
+                                for (int k = 0; k < numOfRoom; k++) {
+                                    SlotEntity slot = timetable[i][j][k];
+                                    if (slot != null) {
+                                        if (slot.getSubjectOfGroupStudent().getGroupStudent().getId()
+                                                .equals(groupStudentId)) {
+                                            check = true;
+                                            break;
+                                        }
+                                    }
+                                    if (check) {
+                                        break;
+                                    }
+                                }
+                            }
+                            if (check) {
+                                continue;
+                            }
+                        }
+
+                        for (int j = 0; j < numOfPeriods && !flag; j++) {       
+                            if(j == 2){
+                                int countSlotOfThisPeriod = 0;
+                                for(int r = 0; r < numOfRoom; r++){
+                                    if(timetable[i][j][r] != null){
+                                        countSlotOfThisPeriod++;
+                                    }
+                                }
+                                if(countSlotOfThisPeriod >= maxSlotOfPeriod){
+                                    continue;
+                                }
+                            }
                             for (int k = 0; k < numOfRoom && !flag; k++) {
                                 // Kiểm tra xem ca đã có trùng giảng viên hoặc lớp không, nếu trùng thì tăng lên
                                 // ca tiếp
@@ -166,73 +201,38 @@ public class TimetableServiceImpl implements TimetableService {
         }
 
         // 5. Đánh giá lịch học
-        int[] s = evaluate(timetable);
-        int score = s[0] + s[1];
+        int s = evaluate(timetable);
+        int score = s;
 
         // 6. Đổi chỗ slot nếu có thể
-        int loop = 0;
-        while (loop < 0) {
-            int day1 = random.nextInt(2);
-            int day2 = random.nextInt(2);
-            int period1 = random.nextInt(numOfPeriods);
-            int room1 = random.nextInt(numOfRoom);
-            int period2 = random.nextInt(numOfPeriods);
-            int room2 = random.nextInt(numOfRoom);
-            TimetabeScore result = changeSlotOfTimetable(timetable, score, day1, period1, room1, day1,
-                    period2, room2);
-            timetable = result.getTimetable();
-            score = result.getScore();
-
-            System.out.println("Change slot score: " + score);
-            System.out.println("Loop: " + loop);
-            System.out.println("________________________");
-
-            loop++;
+        int loop = 1000;
+        while (loop > 0) {
+            for(int rr = 0; rr < numOfRoom ; rr++){
+                for(int dd = 0; dd < numOfday ; dd++){
+                    TimetabeScore ts = evolurionByRoom(timetable, numOfday, numOfRoom, numOfPeriods, dd, rr);
+                    if(ts.getScore() > score){
+                        score = ts.getScore();
+                        timetable = ts.getTimetable();
+                    }    
+                }
+            }
+            System.out.println("current scores timetable: " + score);
+            loop--;
         }
+       
 
-        System.out.println("Score of first timetable: " + (s[0] + s[1]));
+        System.out.println("Score of first timetable: " + s);
 
         System.out.println("Total periods added: " + totalPeriodsAdded);
         // In ra số ca đã dạy của từng giảng viên
         countPeriodsTeached.forEach(
-                (key, value) -> {
-                    System.out.println("Lecturer: " + key + " - Num of periods: " + value);
-                    System.out.println("_____________");
-                });
+        (key, value) -> {
+        System.out.println("Lecturer: " + key + " - Num of periods: " + value);
+        System.out.println("_____________");
+        });
 
-        System.out.println(
-                "-------------------------------------------------------------------------------------------------------------------------------------------------------------------------");
-        System.out.println("");
-        // Print the header
-        System.out.printf("%-15s", "");
-        for (int k = 0; k < numOfRoom; k++) {
-            System.out.printf("| %-20s", "Room " + (k + 1));
-        }
-        System.out.println("|");
-        System.out.println(
-                "-------------------------------------------------------------------------------------------------------------------------------------------------------------------------");
-
-        // Print the timetable
-        for (int i = 0; i < numofday; i++) {
-            for (int j = 0; j < numOfPeriods; j++) {
-                System.out.printf("%-15s", "Day" + (i + 1) + "-Period" + (j + 1));
-                for (int k = 0; k < numOfRoom; k++) {
-                    SlotEntity slot = timetable[i][j][k];
-                    if (slot != null && slot.getSubjectOfGroupStudent() != null
-                            && slot.getSubjectOfGroupStudent().getLecturer() != null) {
-                        System.out.printf("| %-20s", slot.getSubjectOfGroupStudent().getLecturer().getId() + "-"
-                                + slot.getSubjectOfGroupStudent().getGroupStudent().getId()
-                                + "-" + slot.getSubjectOfGroupStudent().getSubject().getNumOfPeriods());
-                    } else {
-                        System.out.printf("| %-20s", "");
-                    }
-                }
-                System.out.println("|");
-            }
-            System.out.println(
-                    "-------------------------------------------------------------------------------------------------------------------------------------------------------------------------");
-        }
-        for (int i = 0; i < numofday; i++) {
+        // 7. Thêm thông tin phòng và ca học vào lịch học
+        for (int i = 0; i < numOfday; i++) {
             for (int j = 0; j < numOfPeriods; j++) {
                 for (int k = 0; k < numOfRoom; k++) {
                     SlotEntity slot = timetable[i][j][k];
@@ -334,21 +334,6 @@ public class TimetableServiceImpl implements TimetableService {
 
     // Phần 2 .
     // kiểm tra giảng viên có trùng trong ca được set không
-    // private boolean checkPeriodValidForLecturer(LecturerEntity lecturer, int day,
-    // int period, int numOfRoom) {
-    // for (int i = 0; i < numOfRoom; i++) {
-    // SlotEntity slot = timetable[day][period][i];
-    // System.out.println("slot: " + slot);
-    // if (slot != null) {
-    // if
-    // (slot.getSubjectOfGroupStudent().getLecturer().getId().equals(lecturer.getId()))
-    // {
-    // return false;
-    // }
-    // }
-    // }
-    // return true;
-    // }
     private boolean checkPeriodValidForLecturer(SlotEntity[][][] timetable, LecturerEntity lecturer, int day,
             int period, int numOfRoom) {
         for (int i = 0; i < numOfRoom; i++) {
@@ -452,154 +437,110 @@ public class TimetableServiceImpl implements TimetableService {
     private TimetabeScore changeSlotOfTimetable(
             SlotEntity[][][] timetable,
             int currentScore,
-            int day1, int period1, int room1,
-            int day2, int period2, int room2) {
+            int day,int period,  int room1, int room2) {
+
         SlotEntity[][][] newTimetable = timetable;
         TimetabeScore result = new TimetabeScore(timetable, currentScore);
 
         // kiểm tra xem slot có hợp lệ không
-        if (day1 < 0 || day1 >= 2 || day2 < 0 || day2 >= 2) {
+        if (day < 0 || day >= 6 ) {
             return result;
         }
 
-        try {
+        SlotEntity slot1 = timetable[day][period][room1];
+        SlotEntity slot2 = timetable[day][period][room2];
+        int maxNumOfPeriods = 0;
+        if (slot1 == null && slot2 == null) {
+            return result;
+        }
 
-            // if (timetable[day1][period1][room1] == null && timetable[day2][period2][room2] != null) {
-            //     int numOfPeriods2 = timetable[day2][period2][room2].getSubjectOfGroupStudent().getSubject()
-            //             .getNumOfPeriods();
-            //     for (int i = 0; i < numOfPeriods2; i++) {
-            //         SlotEntity slot2 = newTimetable[day2 + (2 * i)][period2][room2];
+        if (slot1 != null && slot2 != null) {
+            maxNumOfPeriods = Math.max(slot1.getSubjectOfGroupStudent().getSubject().getNumOfPeriods(),
+                    slot2.getSubjectOfGroupStudent().getSubject().getNumOfPeriods());
+        } else if (slot1 != null) {
+            maxNumOfPeriods = slot1.getSubjectOfGroupStudent().getSubject().getNumOfPeriods();
+        } else {
+            maxNumOfPeriods = slot2.getSubjectOfGroupStudent().getSubject().getNumOfPeriods();
+        }
 
-            //         LecturerEntity lecturer2 = slot2.getSubjectOfGroupStudent().getLecturer();
-            //         GroupStudentEntity class2 = slot2.getSubjectOfGroupStudent().getGroupStudent();
-
-            //         if (slot2 != null) {
-            //             if (checkperiodValidForGroupStudent(newTimetable, class2, day1 + (2 * i), period1, room1)
-            //                     && checkPeriodValidForLecturer(newTimetable, lecturer2, day1 + (2 * i), period1,
-            //                             room1)) {
-            //                 newTimetable[day1 + (2 * i)][period1][room1] = slot2;
-            //                 newTimetable[day2 + (2 * i)][period2][room2] = null;
-            //             } else {
-            //                 return new TimetabeScore(timetable, currentScore);
-            //             }
-
-            //         } else {
-            //             return new TimetabeScore(timetable, currentScore);
-            //         }
-            //     }
-            //     // Đánh giá điểm của thời khóa biểu mới
-            //     int[] newScore = evaluate(newTimetable);
-            //     int newScoreValue = newScore[0] + newScore[1];
-
-            //     System.out.println("New score: " + newScoreValue);
-            //     if (newScoreValue < currentScore) {
-            //         return new TimetabeScore(newTimetable, newScoreValue);
-            //     } else {
-            //         return new TimetabeScore(timetable, currentScore);
-            //     }
-            // }
-
-            // if (timetable[day1][period1][room1] != null && timetable[day2][period2][room2] == null) {
-            //     int numOfPeriods1 = timetable[day1][period1][room1].getSubjectOfGroupStudent().getSubject()
-            //             .getNumOfPeriods();
-            //     for (int i = 0; i < numOfPeriods1; i++) {
-            //         SlotEntity slot1 = newTimetable[day1 + (2 * i)][period1][room1];
-
-            //         LecturerEntity lecturer1 = slot1.getSubjectOfGroupStudent().getLecturer();
-            //         GroupStudentEntity class1 = slot1.getSubjectOfGroupStudent().getGroupStudent();
-
-            //         if (slot1 != null) {
-            //             if (checkperiodValidForGroupStudent(newTimetable, class1, day2 + (2 * i), period2, room2)
-            //                     && checkPeriodValidForLecturer(newTimetable, lecturer1, day2 + (2 * i), period2,
-            //                             room2)) {
-
-            //                 newTimetable[day2 + (2 * i)][period2][room2] = slot1;
-            //                 newTimetable[day1 + (2 * i)][period1][room1] = null;
-            //             } else {
-            //                 return new TimetabeScore(timetable, currentScore);
-            //             }
-            //         } else {
-            //             return new TimetabeScore(timetable, currentScore);
-            //         }
-            //     }
-            //     // Đánh giá điểm của thời khóa biểu mới
-            //     int[] newScore = evaluate(newTimetable);
-            //     int newScoreValue = newScore[0] + newScore[1];
-
-            //     System.out.println("New score: " + newScoreValue);
-            //     if (newScoreValue < currentScore) {
-            //         return new TimetabeScore(newTimetable, newScoreValue);
-            //     } else {
-            //         return new TimetabeScore(timetable, currentScore);
-            //     }
-            // }
-
-            if (timetable[day1][period1][room1] == null && timetable[day2][period2][room2] == null) {
-                return result;
+        // đổi chỗ slot
+        if(day < 2){
+            for (int i = 0; i < maxNumOfPeriods; i++) {
+                newTimetable[day][period][room1] = slot2;
+                newTimetable[day][period][room2] = slot1;
+            }
+            int newScore = evaluate(newTimetable);
+            if (newScore > currentScore) {
+                result.setTimetable(newTimetable);
+                result.setScore(newScore);
             }
 
-            int numOfPeriods1 = timetable[day1][period1][room1].getSubjectOfGroupStudent().getSubject()
-                    .getNumOfPeriods();
-            int numOfPeriods2 = timetable[day2][period2][room2].getSubjectOfGroupStudent().getSubject()
-                    .getNumOfPeriods();
+        }
 
-            int maxNumOfPeriods = Math.max(numOfPeriods1, numOfPeriods2);
-            System.out.println("Max number of periods: " + maxNumOfPeriods);
+        return result;
+    }
 
-            for (int i = 0; i < maxNumOfPeriods; i++) {
-                SlotEntity slot1 = newTimetable[day1 + (2 * i)][period1][room1];
-                SlotEntity slot2 = newTimetable[day2 + (2 * i)][period2][room2];
+    private TimetabeScore evolurionByRoom(SlotEntity[][][] timetable,int totalDays, int totalRooms,  int totalPeriods,int day, int room) {
+        SlotEntity[][][] newTimetable = timetable;
+        TimetabeScore result = new TimetabeScore(timetable, evaluate(timetable));
 
-                LecturerEntity lecturer1 = slot1.getSubjectOfGroupStudent().getLecturer();
-                LecturerEntity lecturer2 = slot2.getSubjectOfGroupStudent().getLecturer();
+        Map<String, Integer> countPeriodsOfLecturers = new HashMap<>();
+        
+        // lấy tất cả slot trong 1 phòng của 1 ngày
+        for(int p = 0; p < totalPeriods; p++){
+            SlotEntity slot = timetable[day][p][room];
+            if(slot != null){
+                String lecturerId = slot.getSubjectOfGroupStudent().getLecturer().getId();
+                Integer count = countPeriodsOfLecturers.get(lecturerId);
+                if(count == null){
+                    count = 0;
+                }
+                countPeriodsOfLecturers.put(lecturerId, count+1);
+            }
+        }
 
-                GroupStudentEntity class1 = slot1.getSubjectOfGroupStudent().getGroupStudent();
-                GroupStudentEntity class2 = slot2.getSubjectOfGroupStudent().getGroupStudent();
+        // lấy ra giảng viên có số ca nhiều nhất 
+        String lecturerId = "";
+        int max = 0;
+        for(Map.Entry<String, Integer> entry : countPeriodsOfLecturers.entrySet()){
+            if(entry.getValue() > max){
+                max = entry.getValue();
+                lecturerId = entry.getKey();
+            }
+        }
 
-                if (slot1 != null && slot2 != null) {
-                    if (checkPeriodValidForLecturer(newTimetable, lecturer1, day2 + (2 * i), period2, room2)
-                            && checkPeriodValidForLecturer(newTimetable, lecturer2, day1 + (2 * i), period1, room1)
-                            && checkperiodValidForGroupStudent(newTimetable, class1, day2 + (2 * i), period2, room2)
-                            && checkperiodValidForGroupStudent(newTimetable, class2, day1 + (2 * i), period1, room1)) {
-                        // đổi thông tin room. period của slot1 và slot2
-                        RoomEntity tempRoom = slot1.getRoom();
-                        slot1.setRoom(slot2.getRoom());
-                        slot2.setRoom(tempRoom);
+        // Tìm period không phải của giảng viên đó. nếu tìm thấy thìm giảng viên đó ở phòng khác cùng ca học, nếu tìm thấy thì đổi chỗ, nếu không thì sang ca tiếp theo
+        for(int p = 0; p < totalPeriods; p++){
+            SlotEntity slot = timetable[day][p][room];
+            if(slot != null){
+                // lấy số ca trong tuần của môn học trong slot tìm được
+                int numOfPeriodsOfThisSlot = slot.getSubjectOfGroupStudent().getSubject().getNumOfPeriods();
 
-                        PeriodEntity tempPeriod = slot1.getPeriod();
-                        slot1.setPeriod(slot2.getPeriod());
-                        slot2.setPeriod(tempPeriod);
-
-                        // Đổi chỗ slot1 và slot2
-                        newTimetable[day1 + (2 * i)][period1][room1] = slot2;
-                        newTimetable[day2 + (2 * i)][period2][room2] = slot1;
-                        System.out.println("Change slot: " + i + " - " + "day" + day1 + " - " + "period 1" + period1
-                                + " - " + room1 + " - "
-                                + "day " + day2 + "- period 2" + period2 + " - " + room2);
-
-                        // SlotEntity[][][] tem2 = new
-                    } else {
-                        return new TimetabeScore(timetable, currentScore);
+                if(!slot.getSubjectOfGroupStudent().getLecturer().getId().equals(lecturerId)){
+                    for(int r = 0; r < totalRooms; r++){
+                        SlotEntity slotFound = timetable[day][p][r];
+                        if(slotFound != null){
+                            if(slotFound.getSubjectOfGroupStudent().getLecturer().getId().equals(lecturerId)){
+                                for(int i = 0; i < numOfPeriodsOfThisSlot; i++){
+                                    newTimetable[day][p][room] = slotFound;
+                                    newTimetable[day][p][r] = slot;
+                                }
+                                int newScore = evaluate(newTimetable);
+                                if(newScore >= result.getScore()){
+                                    result.setTimetable(newTimetable);
+                                    result.setScore(newScore);
+                                    break;
+                                }
+                            }
+                        }
                     }
-                } else {
-                    return new TimetabeScore(timetable, currentScore);
                 }
             }
-            // Đánh giá điểm của thời khóa biểu mới
-            int[] newScore = evaluate(newTimetable);
-            int newScoreValue = newScore[0] + newScore[1];
-
-            System.out.println("New score: " + newScoreValue);
-            if (newScoreValue < currentScore) {
-                return new TimetabeScore(newTimetable, newScoreValue);
-            } else {
-                return new TimetabeScore(timetable, currentScore);
-            }
-        } catch (Exception e) {
-            System.out.println("Error: " + e.getMessage());
-            return new TimetabeScore(timetable, currentScore);
         }
+        return result;
     }
+
+    
 
     /**
      * Đánh giá điểm của thời khóa biểu
@@ -607,64 +548,32 @@ public class TimetableServiceImpl implements TimetableService {
      * @param timetable // thời khóa biểu cần đánh giá
      * @return // điểm của thời khóa biểu
      */
-    private int[] evaluate(SlotEntity[][][] timetable) {
-        int[] score = { 0, 0 };
+    private int evaluate(SlotEntity[][][] timetable) {
+        int score = 0;
         int numOfDays = timetable.length;
-        int numOfPeriods = timetable[0].length;
+        int numOfPeriods = 6;
         int numOfRooms = timetable[0][0].length;
-        List<String> slotChecked = new ArrayList<>();
 
-        for (int day = 0; day < numOfDays; day++) {
-            for (int period = 0; period < numOfPeriods; period++) {
-                for (int room = 0; room < numOfRooms; room++) {
-                    SlotEntity slot = timetable[day][period][room];
-                    if (slot != null) {
-                        // kiểm tra slot đã kiểm tra chưa (kiểm tra theo lớp học và giảng viên)
-                        String key = slot.getSubjectOfGroupStudent().getLecturer().getId() + day;
-                        if (!slotChecked.contains(key)) {
-                            // score += evaluateOneSlot(timetable, slot.getSubjectOfGroupStudent().getId());
-                            int[] subjectScore = evaluateOneDay(timetable, day, period, room);
-                            score[0] += subjectScore[0];
-                            score[1] += subjectScore[1];
-                            // thêm slot vào danh sách đã kiểm tra
-                            slotChecked.add(key);
-                        }
-                    }
+        for (int room = 0; room < numOfRooms; room++) {
+            for (int day = 0; day < numOfDays; day++) {
+                score += evaluateOneRoom(timetable, day, numOfPeriods, room);
                 }
             }
-        }
         return score;
     }
 
-    private int[] evaluateOneDay(SlotEntity[][][] timetable, int day, int period, int room) {
-        int[] score = { 0, 0 };
-        int numOfDays = timetable.length;
-        int numOfPeriods = timetable[0].length;
-        int numOfRooms = timetable[0][0].length;
-        SlotEntity currentSlot = timetable[day][period][room];
-        int currentPeriod = period;
-        int currentRoom = room;
+    private int evaluateOneRoom(SlotEntity[][][] timetable, int day, int numOfPeriods, int room) {
+        int score = 0;
 
-        for (int p = 0; period < numOfPeriods; period++) {
-            for (int r = 0; room < numOfRooms; room++) {
-                SlotEntity slot = timetable[day][period][room];
-                if (slot != null) {
-                    String currentKey = currentSlot.getSubjectOfGroupStudent().getLecturer().getId();
-                    String key = slot.getSubjectOfGroupStudent().getLecturer().getId();
-
-                    if (currentKey.equals(key)) {
-                        // score += evaluateOneSlot(timetable, slot.getSubjectOfGroupStudent().getId());
-                        int periodScore = Math.abs(currentPeriod - p);
-                        int roomScore = Math.abs(currentRoom - r);
-
-                        score[0] += periodScore;
-                        // score[1] += roomScore;
-
-                        currentSlot = slot;
-                        currentPeriod = p;
-                        currentRoom = r;
-                    }
-
+        List<String> lecturersIdChecked = new ArrayList<>();  
+        for(int i = 0 ; i < numOfPeriods ; i++){
+            SlotEntity slot = timetable[day][i][room];
+            if(slot != null){
+                String lecturerId = slot.getSubjectOfGroupStudent().getLecturer().getId();
+                if(lecturersIdChecked.contains(lecturerId)){
+                    score++;
+                } else {
+                    lecturersIdChecked.add(lecturerId);
                 }
             }
         }
